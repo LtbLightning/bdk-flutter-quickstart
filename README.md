@@ -1,6 +1,7 @@
-# bdk_flutter_app
+# bdk-flutter-quickstart
 
-A new Flutter project.
+Accompanying repository for bdk-flutter tutorial: https://bitcoindevkit.org/tutorials/exploring_bdk_flutter/
+
 
 ## Getting Started
 
