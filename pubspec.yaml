@@ -8,7 +8,10 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  bdk_flutter: ^0.1.4
+  bdk_flutter:
+    git:
+      url: https://github.com/LtbLightning/bdk-flutter.git
+      ref: align-api-with-ffi
 dev_dependencies:
   flutter_test:
     sdk: flutter

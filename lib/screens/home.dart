@@ -1,6 +1,5 @@
 import 'package:bdk_flutter/bdk_flutter.dart';
 import 'package:bdk_flutter_quickstart/widgets/widgets.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class Home extends StatefulWidget {
@@ -11,7 +10,8 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  BdkFlutter bdkFlutter = BdkFlutter();
+  late Wallet wallet;
+  late Blockchain blockchain;
   String? displayText;
   String? address;
   String? balance;
@@ -19,21 +19,67 @@ class _HomeState extends State<Home> {
   TextEditingController recipientAddress = TextEditingController();
   TextEditingController amount = TextEditingController();
 
+  String _keyInterpolate(String key, String path) {
+    if (key.contains("/*")) {
+      final res = key.replaceAll("/*", "$path/*");
+      return res;
+    } else {
+      final res = "$key$path/*";
+      return res;
+    }
+  }
+
+  String createDescriptor(String secretKey) {
+    final res = _keyInterpolate("wpkh($secretKey)", "/0");
+    print(res);
+    return res;
+  }
+
+  String createChangeDescriptor(String secretKey) {
+    final res = _keyInterpolate("wpkh($secretKey)", "/1");
+    print(res);
+    return res;
+  }
+
   generateMnemonicHandler() async {
-    var res = await generateMnemonic(entropy: Entropy.ENTROPY256);
+    var res = await generateMnemonic(wordCount: WordCount.Words12);
     setState(() {
       mnemonic.text = res;
       displayText = res;
     });
   }
 
-  createOrRestoreWallet(
-      String mnemonic, Network network, String? password) async {
+  Future<String> createDescriptorSecret(String mnemonic, String path) async {
     try {
-      final res = await bdkFlutter.createWallet(mnemonic: mnemonic, network: network, password: password);
+      final descriptorSecretKey = DescriptorSecretKey(
+        network: Network.Testnet,
+        mnemonic: mnemonic,
+      );
+      final derivationPath = await DerivationPath().create(path: path);
+      final extendedXprv = await descriptorSecretKey.derive(derivationPath);
+      final extendedXprvStr = await extendedXprv.asString();
+      return extendedXprvStr;
+    } on Exception {
+      rethrow;
+    }
+  }
+
+  createOrRestoreWallet(
+      String mnemonic, Network network, String? password, String path) async {
+    try {
+      final extendedXprv = await createDescriptorSecret(mnemonic, path);
+      final descriptor = createDescriptor(extendedXprv);
+      final changeDescriptor = createChangeDescriptor(extendedXprv);
+      await blockchainInit();
+      final res = await Wallet().create(
+          descriptor: descriptor,
+          changeDescriptor: changeDescriptor,
+          network: network,
+          databaseConfig: const DatabaseConfig.memory());
+      var addressInfo = await res.getAddress(addressIndex: AddressIndex.New);
       setState(() {
-        address = res.address;
-        balance = res.balance.total.toString();
+        address = addressInfo.address;
+        wallet = res;
         displayText = "Wallet Created: ${address ?? "Error"}";
       });
     } on Exception catch (e) {
@@ -42,7 +88,7 @@ class _HomeState extends State<Home> {
   }
 
   getBalance() async {
-    final res = await bdkFlutter.getBalance();
+    final res = await wallet.getBalance();
     setState(() {
       balance = res.total.toString();
       displayText = res.total.toString();
@@ -50,25 +96,42 @@ class _HomeState extends State<Home> {
   }
 
   getNewAddress() async {
-    final res = await bdkFlutter.getNewAddress();
+    final res = await wallet.getAddress(addressIndex: AddressIndex.New);
     setState(() {
-      displayText = res;
-      address = res;
+      displayText = res.address;
+      address = res.address;
     });
   }
 
-  sendTx() async {
-    final txid = await bdkFlutter.quickSend(
-        recipient: recipientAddress.text.toString(),
-        amount: int.parse(amount.text),
-        feeRate: 1);
+  sendTx(String addressStr, int amount) async {
+    final txBuilder = TxBuilder();
+    final address = await Address().create(address: addressStr);
+    final script = await address.scriptPubKey();
+    final psbt = await txBuilder
+        .addRecipient(script, amount)
+        .feeRate(1.0)
+        .finish(wallet);
+    final sbt = await wallet.sign(psbt);
+    await blockchain.broadcast(sbt);
     setState(() {
-      displayText = txid;
+      displayText = "Successfully broadcast $amount Sats to $addressStr";
     });
   }
-  syncWallet() async{
-    bdkFlutter.syncWallet();
+
+  blockchainInit() async {
+    blockchain = await Blockchain().create(
+        config: BlockchainConfig.electrum(
+            config: ElectrumConfig(
+                stopGap: 10,
+                timeout: 5,
+                retry: 5,
+                url: "ssl://electrum.blockstream.info:60002")));
   }
+
+  syncWallet() async {
+    wallet.sync(blockchain);
+  }
+
   @override
   Widget build(BuildContext context) {
     final _formKey = GlobalKey<FormState>();
@@ -76,25 +139,7 @@ class _HomeState extends State<Home> {
         resizeToAvoidBottomInset: true,
         backgroundColor: Colors.white,
         /* Header */
-        appBar: AppBar(
-          centerTitle: true,
-          elevation: 0,
-          backgroundColor: Colors.white,
-          leadingWidth: 80,
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 20, bottom: 10, top: 10),
-              child: Image.asset("assets/bdk_logo.png"),
-            )
-          ],
-          leading: const Icon(
-            CupertinoIcons.bitcoin_circle_fill,
-            color: Colors.orange,
-            size: 40,
-          ),
-          title: Text("Bdk-Flutter Tutorial",
-              style: Theme.of(context).textTheme.headline1),
-        ),
+        appBar: buildAppBar(context),
         body: SingleChildScrollView(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 30),
@@ -103,14 +148,14 @@ class _HomeState extends State<Home> {
                 /* Balance */
                 StyledContainer(
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text("Balance: ",
-                            style: Theme.of(context).textTheme.headline2),
-                        Text(" ${balance ?? "0"} Sats",
-                            style: Theme.of(context).textTheme.bodyText1),
-                      ],
-                    )),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text("Balance: ",
+                        style: Theme.of(context).textTheme.headline2),
+                    Text(" ${balance ?? "0"} Sats",
+                        style: Theme.of(context).textTheme.bodyText1),
+                  ],
+                )),
                 /* Result */
                 ResponseContainer(text: displayText ?? "No Response"),
                 StyledContainer(
@@ -118,114 +163,95 @@ class _HomeState extends State<Home> {
                         mainAxisAlignment: MainAxisAlignment.start,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          SubmitButton(
-                              text: "Generate Mnemonic",
-                              callback: () async {
-                                await generateMnemonicHandler();
-                              }),
-                          TextFieldContainer(
-                            child: TextFormField(
-                                controller: mnemonic,
-                                style: Theme.of(context).textTheme.bodyText1,
-                                decoration: InputDecoration(
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.all(8),
-                                  hintText: "Enter your mnemonic here",
-                                  hintStyle: TextStyle(
-                                      color: Colors.black.withOpacity(.4),
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 10),
-                                ),
-                                keyboardType: TextInputType.multiline,
-                                maxLines: 4),
-                          ),
-
-                          SubmitButton(
-                            text: "Create Wallet",
-                            callback: () async {
-                              await createOrRestoreWallet(
-                                  mnemonic.text, Network.TESTNET, "password");
-                            },
-                          ),
-                          SubmitButton(
-                            text: "Sync Wallet",
-                            callback: ()  async{  await syncWallet(); },
-                          ),
-                          SubmitButton(
-                            callback: () async {
-                              await getBalance();
-                            },
-                            text: "Get Balance",
-                          ),
-                          SubmitButton(
-                              callback: () async {
-                                await getNewAddress();
-                              },
-                              text: "Get Address"),
-                        ])),
+                      SubmitButton(
+                          text: "Generate Mnemonic",
+                          callback: () async {
+                            await generateMnemonicHandler();
+                          }),
+                      TextFieldContainer(
+                        child: TextFormField(
+                            controller: mnemonic,
+                            style: Theme.of(context).textTheme.bodyText1,
+                            keyboardType: TextInputType.multiline,
+                            maxLines: 5,
+                            decoration: const InputDecoration(
+                                hintText: "Enter your mnemonic")),
+                      ),
+                      SubmitButton(
+                        text: "Create Wallet",
+                        callback: () async {
+                          await createOrRestoreWallet(mnemonic.text,
+                              Network.Testnet, "password", "m/84'/1'/0'");
+                        },
+                      ),
+                      SubmitButton(
+                        text: "Sync Wallet",
+                        callback: () async {
+                          await syncWallet();
+                        },
+                      ),
+                      SubmitButton(
+                        callback: () async {
+                          await getBalance();
+                        },
+                        text: "Get Balance",
+                      ),
+                      SubmitButton(
+                          callback: () async {
+                            await getNewAddress();
+                          },
+                          text: "Get Address"),
+                    ])),
                 /* Send Transaction */
                 StyledContainer(
                     child: Form(
-                      key: _formKey,
-                      child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            TextFieldContainer(
-                              child: TextFormField(
-                                controller: recipientAddress,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter your address';
-                                  }
-                                  return null;
-                                },
-                                style: Theme.of(context).textTheme.bodyText1,
-                                decoration: InputDecoration(
-                                  border: InputBorder.none,
-                                  contentPadding:
-                                  const EdgeInsets.symmetric(horizontal: 10),
-                                  hintText: "Enter Address",
-                                  hintStyle: TextStyle(
-                                      color: Colors.black.withOpacity(.4),
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 10),
-                                ),
-                              ),
+                  key: _formKey,
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        TextFieldContainer(
+                          child: TextFormField(
+                            controller: recipientAddress,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your address';
+                              }
+                              return null;
+                            },
+                            style: Theme.of(context).textTheme.bodyText1,
+                            decoration: const InputDecoration(
+                              hintText: "Enter Address",
                             ),
-                            TextFieldContainer(
-                              child: TextFormField(
-                                controller: amount,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter the amount';
-                                  }
-                                  return null;
-                                },
-                                keyboardType: TextInputType.number,
-                                style: Theme.of(context).textTheme.bodyText1,
-                                decoration: InputDecoration(
-                                  border: InputBorder.none,
-                                  contentPadding:
-                                  const EdgeInsets.symmetric(horizontal: 10),
-                                  hintText: "Enter Amount",
-                                  hintStyle: TextStyle(
-                                      color: Colors.black.withOpacity(.4),
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 10),
-                                ),
-                              ),
+                          ),
+                        ),
+                        TextFieldContainer(
+                          child: TextFormField(
+                            controller: amount,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter the amount';
+                              }
+                              return null;
+                            },
+                            keyboardType: TextInputType.number,
+                            style: Theme.of(context).textTheme.bodyText1,
+                            decoration: const InputDecoration(
+                              hintText: "Enter Amount",
                             ),
-                            SubmitButton(
-                              text: "Send Bit",
-                              callback: () async {
-                                if (_formKey.currentState!.validate()) {
-                                  await sendTx();
-                                }
-                              },
-                            )
-                          ]),
-                    ))
+                          ),
+                        ),
+                        SubmitButton(
+                          text: "Send Bit",
+                          callback: () async {
+                            if (_formKey.currentState!.validate()) {
+                              await sendTx(recipientAddress.text,
+                                  int.parse(amount.text));
+                            }
+                          },
+                        )
+                      ]),
+                ))
               ],
             ),
           ),
