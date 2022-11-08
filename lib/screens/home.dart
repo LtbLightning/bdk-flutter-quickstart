@@ -19,28 +19,6 @@ class _HomeState extends State<Home> {
   TextEditingController recipientAddress = TextEditingController();
   TextEditingController amount = TextEditingController();
 
-  String _keyInterpolate(String key, String path) {
-    if (key.contains("/*")) {
-      final res = key.replaceAll("/*", "$path/*");
-      return res;
-    } else {
-      final res = "$key$path/*";
-      return res;
-    }
-  }
-
-  String createDescriptor(String secretKey) {
-    final res = _keyInterpolate("wpkh($secretKey)", "/0");
-    print(res);
-    return res;
-  }
-
-  String createChangeDescriptor(String secretKey) {
-    final res = _keyInterpolate("wpkh($secretKey)", "/1");
-    print(res);
-    return res;
-  }
-
   generateMnemonicHandler() async {
     var res = await generateMnemonic(wordCount: WordCount.Words12);
     setState(() {
@@ -49,17 +27,25 @@ class _HomeState extends State<Home> {
     });
   }
 
-  Future<String> createDescriptorSecret(String mnemonic, String path) async {
+  Future<List<String>> getDescriptors(String mnemonic) async {
+    final descriptors = <String>[];
     try {
-      final descriptorSecretKey = DescriptorSecretKey(
-        network: Network.Testnet,
-        mnemonic: mnemonic,
-      );
-      final derivationPath = await DerivationPath().create(path: path);
-      final extendedXprv = await descriptorSecretKey.derive(derivationPath);
-      final extendedXprvStr = await extendedXprv.asString();
-      return extendedXprvStr;
-    } on Exception {
+      for (var e in ["m/84'/1'/0'/0", "m/84'/1'/0'/1"]) {
+        final descriptorSecretKey = DescriptorSecretKey(
+          network: Network.Testnet,
+          mnemonic: mnemonic,
+        );
+        final derivationPath = await DerivationPath().create(path: e);
+        final derivedXprv = await descriptorSecretKey.derive(derivationPath);
+        final derivedXprvStr = await derivedXprv.asString();
+        descriptors.add("wpkh($derivedXprvStr)");
+        print("wpkh($derivedXprvStr)");
+      }
+      return descriptors;
+    } on Exception catch (e) {
+      setState(() {
+        displayText = "Error : ${e.toString()}";
+      });
       rethrow;
     }
   }
@@ -67,23 +53,23 @@ class _HomeState extends State<Home> {
   createOrRestoreWallet(
       String mnemonic, Network network, String? password, String path) async {
     try {
-      final extendedXprv = await createDescriptorSecret(mnemonic, path);
-      final descriptor = createDescriptor(extendedXprv);
-      final changeDescriptor = createChangeDescriptor(extendedXprv);
+      final descriptors = await getDescriptors(mnemonic);
       await blockchainInit();
       final res = await Wallet().create(
-          descriptor: descriptor,
-          changeDescriptor: changeDescriptor,
+          descriptor: descriptors[0],
+          changeDescriptor: descriptors[1],
           network: network,
           databaseConfig: const DatabaseConfig.memory());
       var addressInfo = await res.getAddress(addressIndex: AddressIndex.New);
       setState(() {
         address = addressInfo.address;
         wallet = res;
-        displayText = "Wallet Created: ${address ?? "Error"}";
+        displayText = "Wallet Created: $address";
       });
     } on Exception catch (e) {
-      print(e.toString());
+      setState(() {
+        displayText = "Error: ${e.toString()}";
+      });
     }
   }
 
@@ -97,6 +83,7 @@ class _HomeState extends State<Home> {
 
   getNewAddress() async {
     final res = await wallet.getAddress(addressIndex: AddressIndex.New);
+    print(res.address);
     setState(() {
       displayText = res.address;
       address = res.address;
@@ -104,28 +91,40 @@ class _HomeState extends State<Home> {
   }
 
   sendTx(String addressStr, int amount) async {
-    final txBuilder = TxBuilder();
-    final address = await Address().create(address: addressStr);
-    final script = await address.scriptPubKey();
-    final psbt = await txBuilder
-        .addRecipient(script, amount)
-        .feeRate(1.0)
-        .finish(wallet);
-    final sbt = await wallet.sign(psbt);
-    await blockchain.broadcast(sbt);
-    setState(() {
-      displayText = "Successfully broadcast $amount Sats to $addressStr";
-    });
+    try {
+      final txBuilder = TxBuilder();
+      final address = await Address().create(address: addressStr);
+      final script = await address.scriptPubKey();
+      final psbt = await txBuilder
+          .addRecipient(script, amount)
+          .feeRate(1.0)
+          .finish(wallet);
+      final sbt = await wallet.sign(psbt);
+      await blockchain.broadcast(sbt);
+      setState(() {
+        displayText = "Successfully broadcast $amount Sats to $addressStr";
+      });
+    } on Exception catch (e) {
+      setState(() {
+        displayText = "Error: ${e.toString()}";
+      });
+    }
   }
 
   blockchainInit() async {
-    blockchain = await Blockchain().create(
-        config: BlockchainConfig.electrum(
-            config: ElectrumConfig(
-                stopGap: 10,
-                timeout: 5,
-                retry: 5,
-                url: "ssl://electrum.blockstream.info:60002")));
+    try {
+      blockchain = await Blockchain().create(
+          config: BlockchainConfig.electrum(
+              config: ElectrumConfig(
+                  stopGap: 10,
+                  timeout: 5,
+                  retry: 5,
+                  url: "ssl://electrum.blockstream.info:60002")));
+    } on Exception catch (e) {
+      setState(() {
+        displayText = "Error: ${e.toString()}";
+      });
+    }
   }
 
   syncWallet() async {
