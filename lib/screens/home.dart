@@ -20,10 +20,10 @@ class _HomeState extends State<Home> {
   TextEditingController amount = TextEditingController();
 
   generateMnemonicHandler() async {
-    var res = await generateMnemonic(wordCount: WordCount.Words12);
+    var res = await Mnemonic.create(WordCount.Words12);
     setState(() {
-      mnemonic.text = res;
-      displayText = res;
+      mnemonic.text = res.asString();
+      displayText = res.asString();
     });
   }
 
@@ -31,15 +31,15 @@ class _HomeState extends State<Home> {
     final descriptors = <String>[];
     try {
       for (var e in ["m/84'/1'/0'/0", "m/84'/1'/0'/1"]) {
-        final descriptorSecretKey = DescriptorSecretKey(
+        final mnemonicObj = await Mnemonic.fromString(mnemonic);
+        final descriptorSecretKey = await DescriptorSecretKey.create(
           network: Network.Testnet,
-          mnemonic: mnemonic,
+          mnemonic: mnemonicObj,
         );
-        final derivationPath = await DerivationPath().create(path: e);
+        final derivationPath = await DerivationPath.create(path: e);
         final derivedXprv = await descriptorSecretKey.derive(derivationPath);
         final derivedXprvStr = await derivedXprv.asString();
         descriptors.add("wpkh($derivedXprvStr)");
-        print("wpkh($derivedXprvStr)");
       }
       return descriptors;
     } on Exception catch (e) {
@@ -55,7 +55,7 @@ class _HomeState extends State<Home> {
     try {
       final descriptors = await getDescriptors(mnemonic);
       await blockchainInit();
-      final res = await Wallet().create(
+      final res = await Wallet.create(
           descriptor: descriptors[0],
           changeDescriptor: descriptors[1],
           network: network,
@@ -74,10 +74,12 @@ class _HomeState extends State<Home> {
   }
 
   getBalance() async {
-    final res = await wallet.getBalance();
+    final balanceObj = await wallet.getBalance();
+    final res = "Total Balance: ${balanceObj.total.toString()}";
+    print(res);
     setState(() {
-      balance = res.total.toString();
-      displayText = res.total.toString();
+      balance = balanceObj.total.toString();
+      displayText = res;
     });
   }
 
@@ -93,7 +95,7 @@ class _HomeState extends State<Home> {
   sendTx(String addressStr, int amount) async {
     try {
       final txBuilder = TxBuilder();
-      final address = await Address().create(address: addressStr);
+      final address = await Address.create(address: addressStr);
       final script = await address.scriptPubKey();
       final psbt = await txBuilder
           .addRecipient(script, amount)
@@ -113,7 +115,7 @@ class _HomeState extends State<Home> {
 
   blockchainInit() async {
     try {
-      blockchain = await Blockchain().create(
+      blockchain = await Blockchain.create(
           config: BlockchainConfig.electrum(
               config: ElectrumConfig(
                   stopGap: 10,
