@@ -39,12 +39,10 @@ packages:
   bdk_flutter:
     dependency: "direct main"
     description:
-      path: "."
-      ref: align-api-with-ffi
-      resolved-ref: "7a2da3bd6c463386b037dfa60379f5c2d7551359"
-      url: "https://github.com/LtbLightning/bdk-flutter.git"
-    source: git
-    version: "0.2.0"
+      name: bdk_flutter
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.2.3"
   boolean_selector:
     dependency: transitive
     description:
@@ -203,7 +201,7 @@ packages:
       name: flutter_rust_bridge
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "1.51.0"
+    version: "1.54.0"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -215,7 +213,7 @@ packages:
       name: freezed
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "2.2.1"
+    version: "2.3.2"
   freezed_annotation:
     dependency: transitive
     description:
@@ -438,6 +436,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.4.12"
+  tuple:
+    dependency: transitive
+    description:
+      name: tuple
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "2.0.1"
   typed_data:
     dependency: transitive
     description:
