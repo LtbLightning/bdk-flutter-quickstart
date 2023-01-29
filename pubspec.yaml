@@ -8,7 +8,10 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  bdk_flutter: 0.3.0
+  bdk_flutter:
+    git:
+      url: https://github.com/LtbLightning/bdk-flutter.git
+      ref: update-bdk-v0.26
 dev_dependencies:
   flutter_test:
     sdk: flutter

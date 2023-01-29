@@ -32,7 +32,7 @@ class _HomeState extends State<Home> {
   Future<List<Descriptor>> getDescriptors(String mnemonic) async {
     final descriptors = <Descriptor>[];
     try {
-      for (var e in [KeyChainKind.External, KeyChainKind.Internal]) {
+      for (var e in [KeychainKind.External, KeychainKind.Internal]) {
         final mnemonicObj = await Mnemonic.fromString(mnemonic);
         final descriptorSecretKey = await DescriptorSecretKey.create(
           network: Network.Testnet,
@@ -127,7 +127,8 @@ class _HomeState extends State<Home> {
                   stopGap: 10,
                   timeout: 5,
                   retry: 5,
-                  url: "ssl://electrum.blockstream.info:60002")));
+                  url: "ssl://electrum.blockstream.info:60002",
+                  validateDomain: false)));
     } on Exception catch (e) {
       setState(() {
         displayText = "Error: ${e.toString()}";
