@@ -1,6 +1,8 @@
 import 'package:bdk_flutter/bdk_flutter.dart';
-import 'package:bdk_flutter_quickstart/widgets/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+import '../widgets/widgets.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -27,19 +29,19 @@ class _HomeState extends State<Home> {
     });
   }
 
-  Future<List<String>> getDescriptors(String mnemonic) async {
-    final descriptors = <String>[];
+  Future<List<Descriptor>> getDescriptors(String mnemonic) async {
+    final descriptors = <Descriptor>[];
     try {
-      for (var e in ["m/84'/1'/0'/0", "m/84'/1'/0'/1"]) {
+      for (var e in [KeyChainKind.External, KeyChainKind.Internal]) {
         final mnemonicObj = await Mnemonic.fromString(mnemonic);
         final descriptorSecretKey = await DescriptorSecretKey.create(
           network: Network.Testnet,
           mnemonic: mnemonicObj,
         );
-        final derivationPath = await DerivationPath.create(path: e);
-        final derivedXprv = await descriptorSecretKey.derive(derivationPath);
-        final derivedXprvStr = await derivedXprv.asString();
-        descriptors.add("wpkh($derivedXprvStr)");
+        final secretKey = descriptorSecretKey.asString();
+        final descriptor = await Descriptor.newBip84(
+            secretKey: secretKey, network: Network.Testnet, keyChainKind: e);
+        descriptors.add(descriptor);
       }
       return descriptors;
     } on Exception catch (e) {
@@ -76,7 +78,9 @@ class _HomeState extends State<Home> {
   getBalance() async {
     final balanceObj = await wallet.getBalance();
     final res = "Total Balance: ${balanceObj.total.toString()}";
-    print(res);
+    if (kDebugMode) {
+      print(res);
+    }
     setState(() {
       balance = balanceObj.total.toString();
       displayText = res;
@@ -85,7 +89,9 @@ class _HomeState extends State<Home> {
 
   getNewAddress() async {
     final res = await wallet.getAddress(addressIndex: AddressIndex.New);
-    print(res.address);
+    if (kDebugMode) {
+      print(res.address);
+    }
     setState(() {
       displayText = res.address;
       address = res.address;
@@ -135,7 +141,7 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
-    final _formKey = GlobalKey<FormState>();
+    final formKey = GlobalKey<FormState>();
     return Scaffold(
         resizeToAvoidBottomInset: true,
         backgroundColor: Colors.white,
@@ -206,7 +212,7 @@ class _HomeState extends State<Home> {
                 /* Send Transaction */
                 StyledContainer(
                     child: Form(
-                  key: _formKey,
+                  key: formKey,
                   child: Column(
                       mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -245,7 +251,7 @@ class _HomeState extends State<Home> {
                         SubmitButton(
                           text: "Send Bit",
                           callback: () async {
-                            if (_formKey.currentState!.validate()) {
+                            if (formKey.currentState!.validate()) {
                               await sendTx(recipientAddress.text,
                                   int.parse(amount.text));
                             }

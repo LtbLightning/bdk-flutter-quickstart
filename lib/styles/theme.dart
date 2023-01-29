@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 ThemeData theme() {
-  Color _secondaryColor = Colors.orange;
-  Color _primaryColor = Colors.blue.withOpacity(.8);
+  Color secondaryColor = Colors.orange;
+  Color primaryColor = Colors.blue.withOpacity(.8);
   return ThemeData(
-      primaryColor: _primaryColor,
-      secondaryHeaderColor: _secondaryColor,
+      primaryColor: primaryColor,
+      secondaryHeaderColor: secondaryColor,
       appBarTheme: const AppBarTheme(
         centerTitle: true,
         elevation: 0,
