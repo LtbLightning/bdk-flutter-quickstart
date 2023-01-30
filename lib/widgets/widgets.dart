@@ -65,6 +65,33 @@ class StyledContainer extends StatelessWidget {
   }
 }
 
+class BalanceContainer extends StatelessWidget {
+  final String text;
+
+  const BalanceContainer({Key? key, required this.text}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+        margin: const EdgeInsets.only(bottom: 5),
+        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+        width: double.infinity,
+        child: StyledContainer(
+          child: SelectableText.rich(
+            TextSpan(
+              children: <TextSpan>[
+                TextSpan(
+                    text: "Balance: ",
+                    style: Theme.of(context).textTheme.headline2),
+                TextSpan(
+                    text: text, style: Theme.of(context).textTheme.bodyText1),
+              ],
+            ),
+          ),
+        ));
+  }
+}
+
 class ResponseContainer extends StatelessWidget {
   final String text;
 
@@ -74,21 +101,20 @@ class ResponseContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
         margin: const EdgeInsets.only(bottom: 5),
-        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              width: 2,
-              color: Theme.of(context).primaryColor,
-            )),
+        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
         width: double.infinity,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Response: ", style: Theme.of(context).textTheme.headline2),
-            Text("\"$text\"", style: Theme.of(context).textTheme.bodyText1),
-          ],
+        child: StyledContainer(
+          child: SelectableText.rich(
+            TextSpan(
+              children: <TextSpan>[
+                TextSpan(
+                    text: "Response: ",
+                    style: Theme.of(context).textTheme.headline2),
+                TextSpan(
+                    text: text, style: Theme.of(context).textTheme.bodyText1),
+              ],
+            ),
+          ),
         ));
   }
 }

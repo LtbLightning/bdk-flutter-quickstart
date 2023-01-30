@@ -154,18 +154,13 @@ class _HomeState extends State<Home> {
             child: Column(
               children: [
                 /* Balance */
-                StyledContainer(
-                    child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text("Balance: ",
-                        style: Theme.of(context).textTheme.headline2),
-                    Text(" ${balance ?? "0"} Sats",
-                        style: Theme.of(context).textTheme.bodyText1),
-                  ],
-                )),
+                BalanceContainer(
+                  text: "${balance ?? "0"} Sats",
+                ),
                 /* Result */
-                ResponseContainer(text: displayText ?? "No Response"),
+                ResponseContainer(
+                  text: displayText ?? " ",
+                ),
                 StyledContainer(
                     child: Column(
                         mainAxisAlignment: MainAxisAlignment.start,
