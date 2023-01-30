@@ -39,11 +39,9 @@ packages:
   bdk_flutter:
     dependency: "direct main"
     description:
-      path: "."
-      ref: "update-bdk-v0.26"
-      resolved-ref: ddc2de5bd36ef720bfffcb0c89654fd5f9b6e0ee
-      url: "https://github.com/LtbLightning/bdk-flutter.git"
-    source: git
+      name: bdk_flutter
+      url: "https://pub.dartlang.org"
+    source: hosted
     version: "0.3.0"
   boolean_selector:
     dependency: transitive
