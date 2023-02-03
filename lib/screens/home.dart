@@ -29,18 +29,19 @@ class _HomeState extends State<Home> {
     });
   }
 
-  Future<List<Descriptor>> getDescriptors(String mnemonic) async {
+  Future<List<Descriptor>> getDescriptors(String mnemonicStr) async {
     final descriptors = <Descriptor>[];
     try {
       for (var e in [KeychainKind.External, KeychainKind.Internal]) {
-        final mnemonicObj = await Mnemonic.fromString(mnemonic);
+        final mnemonic = await Mnemonic.fromString(mnemonicStr);
         final descriptorSecretKey = await DescriptorSecretKey.create(
           network: Network.Testnet,
-          mnemonic: mnemonicObj,
+          mnemonic: mnemonic,
         );
-        final secretKey = descriptorSecretKey.asString();
         final descriptor = await Descriptor.newBip84(
-            secretKey: secretKey, network: Network.Testnet, keyChainKind: e);
+            secretKey: descriptorSecretKey,
+            network: Network.Testnet,
+            keychain: e);
         descriptors.add(descriptor);
       }
       return descriptors;
