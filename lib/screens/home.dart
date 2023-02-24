@@ -61,11 +61,17 @@ class _HomeState extends State<Home> {
           network: Network.Testnet,
           mnemonic: mnemonic,
         );
-        final descriptorPublicKey = await descriptorSecretKey.asPublic();
-        final descriptor = await Descriptor.newBip84Public(
-          publicKey: descriptorPublicKey,
+        // Once the descriptorSecretKey is created, we can get the public descriptor
+        // by calling asString() on it.
+        final publicDesctriptor = await descriptorSecretKey.asString();
+        // Now we can store the public descriptor in a database or persist in some
+        // other way.
+
+        // When we need the descriptor recreated we can use the Descriptor.create()
+        // and use the string we got from asString()
+        final descriptor = await Descriptor.create(
+          descriptor: publicDesctriptor,
           network: Network.Testnet,
-          keychain: e,
         );
         descriptors.add(descriptor);
       }
@@ -78,16 +84,44 @@ class _HomeState extends State<Home> {
     }
   }
 
-  createOrRestoreWallet(String mnemonic, Network network, String? password, String path) async {
+  // /// get public descriptors
+  // Future<List<Descriptor>> getPublicDescriptors(String mnemonicStr) async {
+  //   final descriptors = <Descriptor>[];
+  //   try {
+  //     for (var e in [KeychainKind.External, KeychainKind.Internal]) {
+  //       final mnemonic = await Mnemonic.fromString(mnemonicStr);
+  //       final descriptorSecretKey = await DescriptorSecretKey.create(
+  //         network: Network.Testnet,
+  //         mnemonic: mnemonic,
+  //       );
+  //       final descriptorPublicKey = await descriptorSecretKey.asPublic();
+  //       final descriptor = await Descriptor.newBip84Public(
+  //         publicKey: descriptorPublicKey,
+  //         network: Network.Testnet,
+  //         keychain: e,
+  //       );
+  //       descriptors.add(descriptor);
+  //     }
+  //     return descriptors;
+  //   } on Exception catch (e) {
+  //     setState(() {
+  //       displayText = "Error : ${e.toString()}";
+  //     });
+  //     rethrow;
+  //   }
+  // }
+
+  createOrRestoreWallet(String mnemonic, Network network, String? password, String path,
+      {bool readOnly = false}) async {
     try {
-      final descriptors = await getPublicDescriptors(mnemonic);
+      final descriptors = readOnly ? await getPublicDescriptors(mnemonic) : await getDescriptors(mnemonic);
       await blockchainInit();
       final res = await Wallet.create(
           descriptor: descriptors[0],
           changeDescriptor: descriptors[1],
           network: network,
           databaseConfig: const DatabaseConfig.memory());
-      var addressInfo = await res.getAddress(addressIndex: AddressIndex.New);
+      var addressInfo = await res.getAddress(addressIndex: AddressIndex.LastUnused);
       setState(() {
         address = addressInfo.address;
         wallet = res;
@@ -214,7 +248,24 @@ class _HomeState extends State<Home> {
                       SubmitButton(
                         text: "Create Wallet",
                         callback: () async {
-                          await createOrRestoreWallet(mnemonic.text, Network.Testnet, "password", "m/84'/1'/0'");
+                          await createOrRestoreWallet(
+                            mnemonic.text,
+                            Network.Testnet,
+                            "password",
+                            "m/84'/1'/0'",
+                          );
+                        },
+                      ),
+                      SubmitButton(
+                        text: "Create Wallet Public",
+                        callback: () async {
+                          await createOrRestoreWallet(
+                            mnemonic.text,
+                            Network.Testnet,
+                            "password",
+                            "m/84'/1'/0'",
+                            readOnly: true,
+                          );
                         },
                       ),
                       SubmitButton(
