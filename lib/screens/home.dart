@@ -63,14 +63,14 @@ class _HomeState extends State<Home> {
         );
         // Once the descriptorSecretKey is created, we can get the public descriptor
         // by calling asString() on it.
-        final publicDesctriptor = await descriptorSecretKey.asString();
+        final publicDescriptor = descriptorSecretKey.asString();
         // Now we can store the public descriptor in a database or persist in some
         // other way.
 
         // When we need the descriptor recreated we can use the Descriptor.create()
         // and use the string we got from asString()
         final descriptor = await Descriptor.create(
-          descriptor: publicDesctriptor,
+          descriptor: publicDescriptor,
           network: Network.Testnet,
         );
         descriptors.add(descriptor);
