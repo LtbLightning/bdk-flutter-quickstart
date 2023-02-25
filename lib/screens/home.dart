@@ -38,8 +38,10 @@ class _HomeState extends State<Home> {
           network: Network.Testnet,
           mnemonic: mnemonic,
         );
-        final descriptor =
-            await Descriptor.newBip84(secretKey: descriptorSecretKey, network: Network.Testnet, keychain: e);
+        final descriptor = await Descriptor.newBip84(
+            secretKey: descriptorSecretKey,
+            network: Network.Testnet,
+            keychain: e);
         descriptors.add(descriptor);
       }
       return descriptors;
@@ -61,11 +63,21 @@ class _HomeState extends State<Home> {
           network: Network.Testnet,
           mnemonic: mnemonic,
         );
-        // Once the descriptorSecretKey is created, we can get the public descriptor
-        // by calling asString() on it.
-        final publicDescriptor = descriptorSecretKey.asString();
-        // Now we can store the public descriptor in a database or persist in some
-        // other way.
+        // Once the descriptorSecretKey is created, we need to create a descriptor
+        // from it. We can use the Descriptor.newBip84() method to create a new
+        // descriptor from the secret key.
+
+        final tempDescriptor = await Descriptor.newBip84(
+            secretKey: descriptorSecretKey,
+            network: Network.Testnet,
+            keychain: e);
+
+        // From this descriptor we can extract a public descriptor using the
+        // asString() method. This will return a new descriptor that can be
+        // stored in a database or persist in some other way.
+
+        final publicDescriptor = await tempDescriptor.asString();
+        print({publicDescriptor});
 
         // When we need the descriptor recreated we can use the Descriptor.create()
         // and use the string we got from asString()
@@ -75,6 +87,7 @@ class _HomeState extends State<Home> {
         );
         descriptors.add(descriptor);
       }
+      print('The descriptors are $descriptors');
       return descriptors;
     } on Exception catch (e) {
       setState(() {
@@ -111,17 +124,22 @@ class _HomeState extends State<Home> {
   //   }
   // }
 
-  createOrRestoreWallet(String mnemonic, Network network, String? password, String path,
+  createOrRestoreWallet(
+      String mnemonic, Network network, String? password, String path,
       {bool readOnly = false}) async {
     try {
-      final descriptors = readOnly ? await getPublicDescriptors(mnemonic) : await getDescriptors(mnemonic);
+      print({mnemonic, network, password, path, readOnly});
+      final descriptors = readOnly
+          ? await getPublicDescriptors(mnemonic)
+          : await getDescriptors(mnemonic);
       await blockchainInit();
       final res = await Wallet.create(
           descriptor: descriptors[0],
           changeDescriptor: descriptors[1],
           network: network,
           databaseConfig: const DatabaseConfig.memory());
-      var addressInfo = await res.getAddress(addressIndex: AddressIndex.LastUnused);
+      var addressInfo =
+          await res.getAddress(addressIndex: AddressIndex.LastUnused);
       setState(() {
         address = addressInfo.address;
         wallet = res;
@@ -165,7 +183,10 @@ class _HomeState extends State<Home> {
       final txBuilder = TxBuilder();
       final address = await Address.create(address: addressStr);
       final script = await address.scriptPubKey();
-      final psbt = await txBuilder.addRecipient(script, amount).feeRate(1.0).finish(wallet);
+      final psbt = await txBuilder
+          .addRecipient(script, amount)
+          .feeRate(1.0)
+          .finish(wallet);
       final sbt = await wallet.sign(psbt);
       await blockchain.broadcast(sbt);
       setState(() {
@@ -243,7 +264,8 @@ class _HomeState extends State<Home> {
                             style: Theme.of(context).textTheme.bodyText1,
                             keyboardType: TextInputType.multiline,
                             maxLines: 5,
-                            decoration: const InputDecoration(hintText: "Enter your mnemonic")),
+                            decoration: const InputDecoration(
+                                hintText: "Enter your mnemonic")),
                       ),
                       SubmitButton(
                         text: "Create Wallet",
@@ -329,7 +351,8 @@ class _HomeState extends State<Home> {
                           text: "Send Bit",
                           callback: () async {
                             if (formKey.currentState!.validate()) {
-                              await sendTx(recipientAddress.text, int.parse(amount.text));
+                              await sendTx(recipientAddress.text,
+                                  int.parse(amount.text));
                             }
                           },
                         )
