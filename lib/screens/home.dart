@@ -63,7 +63,8 @@ class _HomeState extends State<Home> {
           changeDescriptor: descriptors[1],
           network: network,
           databaseConfig: const DatabaseConfig.memory());
-      var addressInfo = await res.getAddress(addressIndex: AddressIndex.New);
+      var addressInfo =
+          await res.getAddress(addressIndex: const AddressIndex());
       setState(() {
         address = addressInfo.address;
         wallet = res;
@@ -89,7 +90,7 @@ class _HomeState extends State<Home> {
   }
 
   getNewAddress() async {
-    final res = await wallet.getAddress(addressIndex: AddressIndex.New);
+    final res = await wallet.getAddress(addressIndex: const AddressIndex());
     if (kDebugMode) {
       print(res.address);
     }
@@ -108,8 +109,8 @@ class _HomeState extends State<Home> {
           .addRecipient(script, amount)
           .feeRate(1.0)
           .finish(wallet);
-      final sbt = await wallet.sign(psbt);
-      await blockchain.broadcast(sbt);
+      final sbt = await wallet.sign(psbt.psbt);
+      await blockchain.broadcast(await sbt.extractTx());
       setState(() {
         displayText = "Successfully broadcast $amount Sats to $addressStr";
       });
