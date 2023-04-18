@@ -176,7 +176,7 @@ class _HomeState extends State<Home> {
                       TextFieldContainer(
                         child: TextFormField(
                             controller: mnemonic,
-                            style: Theme.of(context).textTheme.bodyText1,
+                            style: Theme.of(context).textTheme.bodyLarge,
                             keyboardType: TextInputType.multiline,
                             maxLines: 5,
                             decoration: const InputDecoration(
@@ -224,7 +224,7 @@ class _HomeState extends State<Home> {
                               }
                               return null;
                             },
-                            style: Theme.of(context).textTheme.bodyText1,
+                            style: Theme.of(context).textTheme.bodyLarge,
                             decoration: const InputDecoration(
                               hintText: "Enter Address",
                             ),
@@ -240,7 +240,7 @@ class _HomeState extends State<Home> {
                               return null;
                             },
                             keyboardType: TextInputType.number,
-                            style: Theme.of(context).textTheme.bodyText1,
+                            style: Theme.of(context).textTheme.bodyLarge,
                             decoration: const InputDecoration(
                               hintText: "Enter Amount",
                             ),
