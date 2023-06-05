@@ -63,11 +63,12 @@ class _HomeState extends State<Home> {
           changeDescriptor: descriptors[1],
           network: network,
           databaseConfig: const DatabaseConfig.memory());
-      var addressInfo =
-          await res.getAddress(addressIndex: const AddressIndex());
+      setState(() {
+        wallet = res;
+      });
+      var addressInfo = await getNewAddress();
       setState(() {
         address = addressInfo.address;
-        wallet = res;
         displayText = "Wallet Created: $address";
       });
     } on Exception catch (e) {
@@ -89,7 +90,7 @@ class _HomeState extends State<Home> {
     });
   }
 
-  getNewAddress() async {
+  Future<AddressInfo> getNewAddress() async {
     final res = await wallet.getAddress(addressIndex: const AddressIndex());
     if (kDebugMode) {
       print(res.address);
@@ -98,6 +99,7 @@ class _HomeState extends State<Home> {
       displayText = res.address;
       address = res.address;
     });
+    return res;
   }
 
   sendTx(String addressStr, int amount) async {
@@ -105,12 +107,13 @@ class _HomeState extends State<Home> {
       final txBuilder = TxBuilder();
       final address = await Address.create(address: addressStr);
       final script = await address.scriptPubKey();
-      final psbt = await txBuilder
+      final txBuilderResult = await txBuilder
           .addRecipient(script, amount)
           .feeRate(1.0)
           .finish(wallet);
-      final sbt = await wallet.sign(psbt.psbt);
-      await blockchain.broadcast(await sbt.extractTx());
+      final sbt = await wallet.sign(psbt: txBuilderResult.psbt);
+      final tx = await sbt.extractTx();
+      await blockchain.broadcast(tx);
       setState(() {
         displayText = "Successfully broadcast $amount Sats to $addressStr";
       });
@@ -176,7 +179,7 @@ class _HomeState extends State<Home> {
                       TextFieldContainer(
                         child: TextFormField(
                             controller: mnemonic,
-                            style: Theme.of(context).textTheme.bodyLarge,
+                            style: Theme.of(context).textTheme.bodyText1,
                             keyboardType: TextInputType.multiline,
                             maxLines: 5,
                             decoration: const InputDecoration(
@@ -224,7 +227,7 @@ class _HomeState extends State<Home> {
                               }
                               return null;
                             },
-                            style: Theme.of(context).textTheme.bodyLarge,
+                            style: Theme.of(context).textTheme.bodyText1,
                             decoration: const InputDecoration(
                               hintText: "Enter Address",
                             ),
@@ -240,7 +243,7 @@ class _HomeState extends State<Home> {
                               return null;
                             },
                             keyboardType: TextInputType.number,
-                            style: Theme.of(context).textTheme.bodyLarge,
+                            style: Theme.of(context).textTheme.bodyText1,
                             decoration: const InputDecoration(
                               hintText: "Enter Amount",
                             ),

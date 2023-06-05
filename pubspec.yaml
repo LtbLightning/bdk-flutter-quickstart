@@ -1,14 +1,15 @@
 name: bdk_flutter_quickstart
 description: A new Flutter project.
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
-version: 0.3.0
+version: 0.28.3
 environment:
   sdk: ">=2.17.1 <3.0.0"
 dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  bdk_flutter: ^0.27.2
+  bdk_flutter: ^0.28.3
+
 
 dev_dependencies:
   flutter_test:
