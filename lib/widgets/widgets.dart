@@ -20,7 +20,7 @@ class SubmitButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
         width: double.infinity,
         child: Center(
-          child: Text(text, style: Theme.of(context).textTheme.button),
+          child: Text(text, style: Theme.of(context).textTheme.labelLarge),
         ),
       ),
     );
@@ -82,9 +82,9 @@ class BalanceContainer extends StatelessWidget {
               children: <TextSpan>[
                 TextSpan(
                     text: "Balance: ",
-                    style: Theme.of(context).textTheme.headline2),
+                    style: Theme.of(context).textTheme.displayMedium),
                 TextSpan(
-                    text: text, style: Theme.of(context).textTheme.bodyText1),
+                    text: text, style: Theme.of(context).textTheme.bodyLarge),
               ],
             ),
           ),
@@ -109,9 +109,9 @@ class ResponseContainer extends StatelessWidget {
               children: <TextSpan>[
                 TextSpan(
                     text: "Response: ",
-                    style: Theme.of(context).textTheme.headline2),
+                    style: Theme.of(context).textTheme.displayMedium),
                 TextSpan(
-                    text: text, style: Theme.of(context).textTheme.bodyText1),
+                    text: text, style: Theme.of(context).textTheme.bodyLarge),
               ],
             ),
           ),
@@ -134,6 +134,6 @@ AppBar buildAppBar(BuildContext context) {
       size: 40,
     ),
     title: Text("Bdk-Flutter Tutorial",
-        style: Theme.of(context).textTheme.headline1),
+        style: Theme.of(context).textTheme.displayLarge),
   );
 }
