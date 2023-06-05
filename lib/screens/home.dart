@@ -63,10 +63,12 @@ class _HomeState extends State<Home> {
           changeDescriptor: descriptors[1],
           network: network,
           databaseConfig: const DatabaseConfig.memory());
-      var addressInfo = await res.getAddress(addressIndex: AddressIndex.New);
+      setState(() {
+        wallet = res;
+      });
+      var addressInfo = await getNewAddress();
       setState(() {
         address = addressInfo.address;
-        wallet = res;
         displayText = "Wallet Created: $address";
       });
     } on Exception catch (e) {
@@ -88,8 +90,8 @@ class _HomeState extends State<Home> {
     });
   }
 
-  getNewAddress() async {
-    final res = await wallet.getAddress(addressIndex: AddressIndex.New);
+  Future<AddressInfo> getNewAddress() async {
+    final res = await wallet.getAddress(addressIndex: const AddressIndex());
     if (kDebugMode) {
       print(res.address);
     }
@@ -97,6 +99,7 @@ class _HomeState extends State<Home> {
       displayText = res.address;
       address = res.address;
     });
+    return res;
   }
 
   sendTx(String addressStr, int amount) async {
@@ -104,12 +107,13 @@ class _HomeState extends State<Home> {
       final txBuilder = TxBuilder();
       final address = await Address.create(address: addressStr);
       final script = await address.scriptPubKey();
-      final psbt = await txBuilder
+      final txBuilderResult = await txBuilder
           .addRecipient(script, amount)
           .feeRate(1.0)
           .finish(wallet);
-      final sbt = await wallet.sign(psbt);
-      await blockchain.broadcast(sbt);
+      final sbt = await wallet.sign(psbt: txBuilderResult.psbt);
+      final tx = await sbt.extractTx();
+      await blockchain.broadcast(tx);
       setState(() {
         displayText = "Successfully broadcast $amount Sats to $addressStr";
       });
