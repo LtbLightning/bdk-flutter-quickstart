@@ -38,7 +38,7 @@ class _HomeState extends State<Home> {
           network: Network.Testnet,
           mnemonic: mnemonic,
         );
-        final descriptor = await Descriptor.newBip84(
+        final descriptor = await Descriptor.newBip86(
             secretKey: descriptorSecretKey,
             network: Network.Testnet,
             keychain: e);
@@ -127,7 +127,7 @@ class _HomeState extends State<Home> {
   blockchainInit() async {
     try {
       blockchain = await Blockchain.create(
-          config: BlockchainConfig.electrum(
+          config: const BlockchainConfig.electrum(
               config: ElectrumConfig(
                   stopGap: 10,
                   timeout: 5,
@@ -179,7 +179,7 @@ class _HomeState extends State<Home> {
                       TextFieldContainer(
                         child: TextFormField(
                             controller: mnemonic,
-                            style: Theme.of(context).textTheme.bodyText1,
+                            style: Theme.of(context).textTheme.bodyLarge,
                             keyboardType: TextInputType.multiline,
                             maxLines: 5,
                             decoration: const InputDecoration(
@@ -227,7 +227,7 @@ class _HomeState extends State<Home> {
                               }
                               return null;
                             },
-                            style: Theme.of(context).textTheme.bodyText1,
+                            style: Theme.of(context).textTheme.bodyLarge,
                             decoration: const InputDecoration(
                               hintText: "Enter Address",
                             ),
@@ -243,7 +243,7 @@ class _HomeState extends State<Home> {
                               return null;
                             },
                             keyboardType: TextInputType.number,
-                            style: Theme.of(context).textTheme.bodyText1,
+                            style: Theme.of(context).textTheme.bodyLarge,
                             decoration: const InputDecoration(
                               hintText: "Enter Amount",
                             ),
