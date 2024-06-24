@@ -36,12 +36,12 @@ class _HomeState extends State<Home> {
       for (var e in [KeychainKind.externalChain, KeychainKind.internalChain]) {
         final mnemonic = await Mnemonic.fromString(mnemonicStr);
         final descriptorSecretKey = await DescriptorSecretKey.create(
-          network: Network.testnet,
+          network: Network.signet,
           mnemonic: mnemonic,
         );
         final descriptor = await Descriptor.newBip86(
             secretKey: descriptorSecretKey,
-            network: Network.testnet,
+            network: Network.signet,
             keychain: e);
         descriptors.add(descriptor);
       }
@@ -108,7 +108,7 @@ class _HomeState extends State<Home> {
     try {
       final txBuilder = TxBuilder();
       final address =
-          await Address.fromString(s: addressStr, network: Network.testnet);
+          await Address.fromString(s: addressStr, network: Network.signet);
       final script = await address.scriptPubkey();
 
       final psbt = await txBuilder
@@ -137,13 +137,13 @@ class _HomeState extends State<Home> {
   blockchainInit() async {
     try {
       blockchain = await Blockchain.create(
-          config: const BlockchainConfig.electrum(
-              config: ElectrumConfig(
-                  stopGap: 10,
-                  timeout: 5,
-                  retry: 5,
-                  url: "ssl://electrum.blockstream.info:60002",
-                  validateDomain: false)));
+        config: const BlockchainConfig.esplora(
+          config: EsploraConfig(
+            baseUrl: 'https://mutinynet.ltbl.io/api',
+            stopGap: 10,
+          ),
+        ),
+      );
     } on Exception catch (e) {
       setState(() {
         displayText = "Error: ${e.toString()}";
@@ -199,7 +199,7 @@ class _HomeState extends State<Home> {
                         text: "Create Wallet",
                         callback: () async {
                           await createOrRestoreWallet(mnemonic.text,
-                              Network.testnet, "password", "m/84'/1'/0'");
+                              Network.signet, "password", "m/84'/1'/0'");
                         },
                       ),
                       SubmitButton(
