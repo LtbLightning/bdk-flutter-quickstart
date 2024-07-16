@@ -22,25 +22,26 @@ class _HomeState extends State<Home> {
   TextEditingController amount = TextEditingController();
 
   generateMnemonicHandler() async {
-    var res = await Mnemonic.create(WordCount.Words12);
+    var res = await (await Mnemonic.create(WordCount.words12)).asString();
+
     setState(() {
-      mnemonic.text = res.asString();
-      displayText = res.asString();
+      mnemonic.text = res;
+      displayText = res;
     });
   }
 
   Future<List<Descriptor>> getDescriptors(String mnemonicStr) async {
     final descriptors = <Descriptor>[];
     try {
-      for (var e in [KeychainKind.External, KeychainKind.Internal]) {
+      for (var e in [KeychainKind.externalChain, KeychainKind.internalChain]) {
         final mnemonic = await Mnemonic.fromString(mnemonicStr);
         final descriptorSecretKey = await DescriptorSecretKey.create(
-          network: Network.Testnet,
+          network: Network.signet,
           mnemonic: mnemonic,
         );
-        final descriptor = await Descriptor.newBip84(
+        final descriptor = await Descriptor.newBip86(
             secretKey: descriptorSecretKey,
-            network: Network.Testnet,
+            network: Network.signet,
             keychain: e);
         descriptors.add(descriptor);
       }
@@ -67,8 +68,8 @@ class _HomeState extends State<Home> {
         wallet = res;
       });
       var addressInfo = await getNewAddress();
+      address = await addressInfo.address.asString();
       setState(() {
-        address = addressInfo.address;
         displayText = "Wallet Created: $address";
       });
     } on Exception catch (e) {
@@ -91,13 +92,14 @@ class _HomeState extends State<Home> {
   }
 
   Future<AddressInfo> getNewAddress() async {
-    final res = await wallet.getAddress(addressIndex: const AddressIndex());
+    final res =
+        await wallet.getAddress(addressIndex: const AddressIndex.increase());
     if (kDebugMode) {
       print(res.address);
     }
+    address = await res.address.asString();
     setState(() {
-      displayText = res.address;
-      address = res.address;
+      displayText = address;
     });
     return res;
   }
@@ -105,15 +107,23 @@ class _HomeState extends State<Home> {
   sendTx(String addressStr, int amount) async {
     try {
       final txBuilder = TxBuilder();
-      final address = await Address.create(address: addressStr);
-      final script = await address.scriptPubKey();
-      final txBuilderResult = await txBuilder
+      final address =
+          await Address.fromString(s: addressStr, network: Network.signet);
+      final script = await address.scriptPubkey();
+
+      final psbt = await txBuilder
           .addRecipient(script, amount)
           .feeRate(1.0)
           .finish(wallet);
-      final sbt = await wallet.sign(psbt: txBuilderResult.psbt);
-      final tx = await sbt.extractTx();
-      await blockchain.broadcast(tx);
+      final isFinalized = await wallet.sign(psbt: psbt.$1);
+      if (isFinalized) {
+        final tx = await psbt.$1.extractTx();
+        final res = await blockchain.broadcast(transaction: tx);
+        debugPrint(res);
+      } else {
+        debugPrint("psbt not finalized!");
+      }
+
       setState(() {
         displayText = "Successfully broadcast $amount Sats to $addressStr";
       });
@@ -127,13 +137,13 @@ class _HomeState extends State<Home> {
   blockchainInit() async {
     try {
       blockchain = await Blockchain.create(
-          config: BlockchainConfig.electrum(
-              config: ElectrumConfig(
-                  stopGap: 10,
-                  timeout: 5,
-                  retry: 5,
-                  url: "ssl://electrum.blockstream.info:60002",
-                  validateDomain: false)));
+        config: const BlockchainConfig.esplora(
+          config: EsploraConfig(
+            baseUrl: 'https://mutinynet.ltbl.io/api',
+            stopGap: 10,
+          ),
+        ),
+      );
     } on Exception catch (e) {
       setState(() {
         displayText = "Error: ${e.toString()}";
@@ -142,7 +152,7 @@ class _HomeState extends State<Home> {
   }
 
   syncWallet() async {
-    wallet.sync(blockchain);
+    wallet.sync(blockchain: blockchain);
   }
 
   @override
@@ -179,7 +189,7 @@ class _HomeState extends State<Home> {
                       TextFieldContainer(
                         child: TextFormField(
                             controller: mnemonic,
-                            style: Theme.of(context).textTheme.bodyText1,
+                            style: Theme.of(context).textTheme.bodyLarge,
                             keyboardType: TextInputType.multiline,
                             maxLines: 5,
                             decoration: const InputDecoration(
@@ -189,7 +199,7 @@ class _HomeState extends State<Home> {
                         text: "Create Wallet",
                         callback: () async {
                           await createOrRestoreWallet(mnemonic.text,
-                              Network.Testnet, "password", "m/84'/1'/0'");
+                              Network.signet, "password", "m/84'/1'/0'");
                         },
                       ),
                       SubmitButton(
@@ -227,7 +237,7 @@ class _HomeState extends State<Home> {
                               }
                               return null;
                             },
-                            style: Theme.of(context).textTheme.bodyText1,
+                            style: Theme.of(context).textTheme.bodyLarge,
                             decoration: const InputDecoration(
                               hintText: "Enter Address",
                             ),
@@ -243,7 +253,7 @@ class _HomeState extends State<Home> {
                               return null;
                             },
                             keyboardType: TextInputType.number,
-                            style: Theme.of(context).textTheme.bodyText1,
+                            style: Theme.of(context).textTheme.bodyLarge,
                             decoration: const InputDecoration(
                               hintText: "Enter Amount",
                             ),

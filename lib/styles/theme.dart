@@ -12,15 +12,15 @@ ThemeData theme() {
         backgroundColor: Colors.white,
       ),
       textTheme: TextTheme(
-          headline1: const TextStyle(
+          displayLarge: const TextStyle(
               color: Colors.black, fontWeight: FontWeight.w900, fontSize: 18),
-          headline2: const TextStyle(
+          displayMedium: const TextStyle(
               color: Colors.black, fontWeight: FontWeight.w900, fontSize: 14.5),
-          bodyText1: TextStyle(
+          bodyLarge: TextStyle(
               color: Colors.black.withOpacity(.8),
               fontWeight: FontWeight.w500,
               fontSize: 12),
-          button: const TextStyle(
+          labelLarge: const TextStyle(
               color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
       inputDecorationTheme: InputDecorationTheme(
         border: InputBorder.none,
