@@ -5,8 +5,7 @@ class SubmitButton extends StatelessWidget {
   final String text;
   final VoidCallback callback;
 
-  const SubmitButton({Key? key, required this.text, required this.callback})
-      : super(key: key);
+  const SubmitButton({super.key, required this.text, required this.callback});
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +29,7 @@ class SubmitButton extends StatelessWidget {
 class TextFieldContainer extends StatelessWidget {
   final Widget child;
 
-  const TextFieldContainer({Key? key, required this.child}) : super(key: key);
+  const TextFieldContainer({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +46,7 @@ class TextFieldContainer extends StatelessWidget {
 class StyledContainer extends StatelessWidget {
   final Widget child;
 
-  const StyledContainer({Key? key, required this.child}) : super(key: key);
+  const StyledContainer({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +67,7 @@ class StyledContainer extends StatelessWidget {
 class BalanceContainer extends StatelessWidget {
   final String text;
 
-  const BalanceContainer({Key? key, required this.text}) : super(key: key);
+  const BalanceContainer({super.key, required this.text});
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +94,7 @@ class BalanceContainer extends StatelessWidget {
 class ResponseContainer extends StatelessWidget {
   final String text;
 
-  const ResponseContainer({Key? key, required this.text}) : super(key: key);
+  const ResponseContainer({super.key, required this.text});
 
   @override
   Widget build(BuildContext context) {

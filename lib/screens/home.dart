@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../widgets/widgets.dart';
 
 class Home extends StatefulWidget {
-  const Home({Key? key}) : super(key: key);
+  const Home({super.key});
 
   @override
   State<Home> createState() => _HomeState();
@@ -22,11 +22,10 @@ class _HomeState extends State<Home> {
   TextEditingController amount = TextEditingController();
 
   generateMnemonicHandler() async {
-    var res = await (await Mnemonic.create(WordCount.words12)).asString();
-
+    var res = await Mnemonic.create(WordCount.words12);
     setState(() {
-      mnemonic.text = res;
-      displayText = res;
+      mnemonic.text = res.toString();
+      displayText = res.toString();
     });
   }
 
@@ -54,8 +53,7 @@ class _HomeState extends State<Home> {
     }
   }
 
-  createOrRestoreWallet(
-      String mnemonic, Network network, String? password, String path) async {
+  createOrRestoreWallet(String mnemonic, Network network) async {
     try {
       final descriptors = await getDescriptors(mnemonic);
       await blockchainInit();
@@ -63,13 +61,13 @@ class _HomeState extends State<Home> {
           descriptor: descriptors[0],
           changeDescriptor: descriptors[1],
           network: network,
-          databaseConfig: const DatabaseConfig.memory());
+          databaseConfig: DatabaseConfig.memory());
       setState(() {
         wallet = res;
       });
       var addressInfo = await getNewAddress();
-      address = await addressInfo.address.asString();
       setState(() {
+        address = addressInfo.address.toString();
         displayText = "Wallet Created: $address";
       });
     } on Exception catch (e) {
@@ -97,9 +95,9 @@ class _HomeState extends State<Home> {
     if (kDebugMode) {
       print(res.address);
     }
-    address = await res.address.asString();
     setState(() {
-      displayText = address;
+      displayText = res.address.toString();
+      address = res.address.toString();
     });
     return res;
   }
@@ -108,25 +106,25 @@ class _HomeState extends State<Home> {
     try {
       final txBuilder = TxBuilder();
       final address =
-          await Address.fromString(s: addressStr, network: Network.signet);
-      final script = await address.scriptPubkey();
-
-      final psbt = await txBuilder
-          .addRecipient(script, amount)
+          await Address.fromString(s: addressStr, network: wallet.network());
+      final script = address.scriptPubkey();
+      final txBuilderResult = await txBuilder
+          .addRecipient(script, BigInt.from(amount))
           .feeRate(1.0)
           .finish(wallet);
-      final isFinalized = await wallet.sign(psbt: psbt.$1);
+      final psbt = txBuilderResult.$1;
+      final isFinalized = await wallet.sign(psbt: psbt);
       if (isFinalized) {
-        final tx = await psbt.$1.extractTx();
-        final res = await blockchain.broadcast(transaction: tx);
-        debugPrint(res);
+        final tx = psbt.extractTx();
+        await blockchain.broadcast(transaction: tx);
+        setState(() {
+          displayText = "Successfully broadcast $amount Sats to $addressStr";
+        });
       } else {
-        debugPrint("psbt not finalized!");
+        setState(() {
+          displayText = "psbt not finalized";
+        });
       }
-
-      setState(() {
-        displayText = "Successfully broadcast $amount Sats to $addressStr";
-      });
     } on Exception catch (e) {
       setState(() {
         displayText = "Error: ${e.toString()}";
@@ -137,13 +135,20 @@ class _HomeState extends State<Home> {
   blockchainInit() async {
     try {
       blockchain = await Blockchain.create(
-        config: const BlockchainConfig.esplora(
+        config: BlockchainConfig.esplora(
           config: EsploraConfig(
-            baseUrl: 'https://mutinynet.ltbl.io/api',
-            stopGap: 10,
+            baseUrl: "https://mutinynet.com/api",
+            stopGap: BigInt.from(10),
+            timeout: BigInt.from(5),
+            concurrency: 4,
+            proxy: null,
           ),
         ),
       );
+
+      if (kDebugMode) {
+        print("Blockchain initialized successfully");
+      }
     } on Exception catch (e) {
       setState(() {
         displayText = "Error: ${e.toString()}";
@@ -151,8 +156,28 @@ class _HomeState extends State<Home> {
     }
   }
 
-  syncWallet() async {
-    wallet.sync(blockchain: blockchain);
+  Future<void> syncWallet() async {
+    try {
+      setState(() {
+        displayText = "Syncing wallet...";
+      });
+
+      await wallet.sync(blockchain: blockchain);
+      setState(() {
+        displayText = "Sync completed";
+      });
+
+      if (kDebugMode) {
+        print("Wallet sync completed successfully");
+      }
+    } on Exception catch (e) {
+      setState(() {
+        displayText = "Sync error: $e";
+      });
+      if (kDebugMode) {
+        print("Error during sync: $e");
+      }
+    }
   }
 
   @override
@@ -198,8 +223,10 @@ class _HomeState extends State<Home> {
                       SubmitButton(
                         text: "Create Wallet",
                         callback: () async {
-                          await createOrRestoreWallet(mnemonic.text,
-                              Network.signet, "password", "m/84'/1'/0'");
+                          await createOrRestoreWallet(
+                            mnemonic.text,
+                            Network.signet,
+                          );
                         },
                       ),
                       SubmitButton(
